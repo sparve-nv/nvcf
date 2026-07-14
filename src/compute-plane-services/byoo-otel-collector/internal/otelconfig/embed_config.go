@@ -50,6 +50,7 @@ type TemplateConfig struct {
 	// LogExporterBatchMaxSizeBytes configures exporterhelper byte batching for logs.
 	// Zero uses the default selected for BYOO.
 	LogExporterBatchMaxSizeBytes int
+	OTelCollector                OTelCollectorConfig
 }
 
 type LogChunkingConfig struct {

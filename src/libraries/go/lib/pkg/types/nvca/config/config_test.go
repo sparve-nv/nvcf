@@ -16,6 +16,8 @@
 package nvcaconfig
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -194,6 +196,66 @@ agent:
 	gotDecodedCfg, err := DecodeConfig([]byte(expConfigStr))
 	require.NoError(t, err)
 	assert.Equal(t, cfg, gotDecodedCfg)
+}
+
+func TestAgentConfig_BYOOOTelCollectorEnvVars(t *testing.T) {
+	development := true
+	retryEnabled := true
+	queueEnabled := true
+	queueSize := int64(1024)
+	sendBatchSize := int64(2048)
+	exporterBatchMaxSizeBytes := int64(1000000)
+
+	agentConfig := AgentConfig{
+		BYOOLogChunking: BYOOLogChunkingConfig{
+			MaxBodyBytes:              983040,
+			DryRun:                    true,
+			ExporterBatchMaxSizeBytes: &exporterBatchMaxSizeBytes,
+		},
+		BYOOOTelCollector: BYOOOTelCollectorConfig{
+			ExporterHelper: BYOOOTelExporterHelperConfig{
+				Timeout: "30s",
+				RetryOnFailure: BYOOOTelRetryOnFailureConfig{
+					Enabled:         &retryEnabled,
+					InitialInterval: "1s",
+					MaxInterval:     "5s",
+					MaxElapsedTime:  "30s",
+				},
+				SendingQueue: BYOOOTelSendingQueueConfig{
+					Enabled:   &queueEnabled,
+					QueueSize: &queueSize,
+				},
+			},
+			Batch: BYOOOTelBatchConfig{
+				Timeout:       "2s",
+				SendBatchSize: &sendBatchSize,
+			},
+			Logs: BYOOOTelLogsConfig{
+				Level:       "debug",
+				Development: &development,
+			},
+			DebugExporter: BYOOOTelDebugExporterConfig{
+				Enabled: true,
+			},
+		},
+	}
+
+	envsByName := map[string]string{}
+	for _, env := range agentConfig.BYOOOTelCollectorEnvVars() {
+		envsByName[env.Name] = env.Value
+	}
+
+	assert.Equal(t, "983040", envsByName[BYOOLogChunkMaxBodyBytesEnv])
+	assert.Equal(t, "true", envsByName[BYOOLogChunkDryRunEnv])
+	assert.Equal(t, "1000000", envsByName[BYOOLogExporterBatchMaxSizeBytesEnv])
+
+	encoded, ok := envsByName[BYOOOTelCollectorConfigEnv]
+	require.True(t, ok)
+	decodedBytes, err := base64.StdEncoding.DecodeString(encoded)
+	require.NoError(t, err)
+	var got BYOOOTelCollectorConfig
+	require.NoError(t, json.Unmarshal(decodedBytes, &got))
+	assert.Equal(t, agentConfig.BYOOOTelCollector, got)
 }
 
 func TestConfig_EncodeDecode_Tolerations(t *testing.T) {

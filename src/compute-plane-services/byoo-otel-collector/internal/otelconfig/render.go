@@ -642,5 +642,7 @@ func generateExportersAndService(config TelemetryConfig, otelConfig *OpenTelemet
 		otelConfig.Service.Pipelines["traces"] = tracePipeline
 	}
 
+	applyOTelCollectorConfig(otelConfig, tmplConfig.OTelCollector)
+
 	return nil
 }

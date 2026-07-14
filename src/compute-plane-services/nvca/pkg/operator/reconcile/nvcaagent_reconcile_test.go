@@ -2791,6 +2791,8 @@ func TestEncodeAgentConfig_ConfiguresSelfHostedControlPlaneEndpoints(t *testing.
 }
 
 func TestEncodeAgentConfig_MergesBYOOConfig(t *testing.T) {
+	retryEnabled := true
+	logDevelopment := true
 	mergeCfg := nvcaconfig.Config{
 		Agent: nvcaconfig.AgentConfig{
 			BYOOResources: nvcaconfig.ResourceRequirements{
@@ -2818,6 +2820,32 @@ func TestEncodeAgentConfig_MergesBYOOConfig(t *testing.T) {
 				DryRun:                    true,
 				ExporterBatchMaxSizeBytes: ptr.To[int64](1000000),
 			},
+			BYOOOTelCollector: nvcaconfig.BYOOOTelCollectorConfig{
+				ExporterHelper: nvcaconfig.BYOOOTelExporterHelperConfig{
+					Timeout: "30s",
+					RetryOnFailure: nvcaconfig.BYOOOTelRetryOnFailureConfig{
+						Enabled:         &retryEnabled,
+						InitialInterval: "1s",
+						MaxInterval:     "5s",
+						MaxElapsedTime:  "30s",
+					},
+				},
+				MemoryLimiter: nvcaconfig.BYOOOTelMemoryLimiterConfig{
+					CheckInterval: "1s",
+					LimitMiB:      ptr.To[int64](512),
+				},
+				Batch: nvcaconfig.BYOOOTelBatchConfig{
+					Timeout:       "2s",
+					SendBatchSize: ptr.To[int64](2048),
+				},
+				Logs: nvcaconfig.BYOOOTelLogsConfig{
+					Level:       "debug",
+					Development: &logDevelopment,
+				},
+				DebugExporter: nvcaconfig.BYOOOTelDebugExporterConfig{
+					Enabled: true,
+				},
+			},
 		},
 	}
 
@@ -2834,6 +2862,19 @@ func TestEncodeAgentConfig_MergesBYOOConfig(t *testing.T) {
 	assert.True(t, got.Agent.BYOOLogChunking.DryRun)
 	require.NotNil(t, got.Agent.BYOOLogChunking.ExporterBatchMaxSizeBytes)
 	assert.Equal(t, int64(1000000), *got.Agent.BYOOLogChunking.ExporterBatchMaxSizeBytes)
+	assert.Equal(t, "30s", got.Agent.BYOOOTelCollector.ExporterHelper.Timeout)
+	require.NotNil(t, got.Agent.BYOOOTelCollector.ExporterHelper.RetryOnFailure.Enabled)
+	assert.True(t, *got.Agent.BYOOOTelCollector.ExporterHelper.RetryOnFailure.Enabled)
+	assert.Equal(t, "1s", got.Agent.BYOOOTelCollector.MemoryLimiter.CheckInterval)
+	require.NotNil(t, got.Agent.BYOOOTelCollector.MemoryLimiter.LimitMiB)
+	assert.Equal(t, int64(512), *got.Agent.BYOOOTelCollector.MemoryLimiter.LimitMiB)
+	assert.Equal(t, "2s", got.Agent.BYOOOTelCollector.Batch.Timeout)
+	require.NotNil(t, got.Agent.BYOOOTelCollector.Batch.SendBatchSize)
+	assert.Equal(t, int64(2048), *got.Agent.BYOOOTelCollector.Batch.SendBatchSize)
+	assert.Equal(t, "debug", got.Agent.BYOOOTelCollector.Logs.Level)
+	require.NotNil(t, got.Agent.BYOOOTelCollector.Logs.Development)
+	assert.True(t, *got.Agent.BYOOOTelCollector.Logs.Development)
+	assert.True(t, got.Agent.BYOOOTelCollector.DebugExporter.Enabled)
 }
 
 func TestAgentHostOverrideConfig_ClearsReValHostForSelfHostedColocatedService(t *testing.T) {

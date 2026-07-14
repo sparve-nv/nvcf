@@ -394,6 +394,119 @@ func TestGenerateExportersAndServiceUsesCustomLogExporterBatchMaxSize(t *testing
 	}, exporter["sending_queue"])
 }
 
+func TestGenerateExportersAndServiceAppliesCollectorOverrides(t *testing.T) {
+	cfg := TelemetryConfig{
+		Telemetries: Telemetries{
+			Logs: &Telemetry{
+				Name:     "example-logs",
+				Protocol: ProtocolHTTP,
+				Provider: ProviderSplunk,
+				Endpoint: "https://splunk.example.invalid",
+			},
+			Metrics: &Telemetry{
+				Name:     "example-metrics",
+				Protocol: ProtocolHTTP,
+				Provider: ProviderDatadog,
+				Endpoint: "datadoghq.com",
+			},
+			Traces: &Telemetry{
+				Name:     "example-traces",
+				Protocol: ProtocolHTTP,
+				Provider: ProviderServiceNow,
+				Endpoint: "otel.example.invalid:4317",
+			},
+		},
+	}
+	otelConfig := &OpenTelemetryConfig{}
+	initializeConfigMaps(otelConfig)
+
+	err := generateExportersAndService(cfg, otelConfig, TemplateConfig{
+		Namespace: "test-namespace",
+		OTelCollector: OTelCollectorConfig{
+			ExporterHelper: ExporterHelperConfig{
+				Timeout: "30s",
+				RetryOnFailure: RetryOnFailureConfig{
+					Enabled:         testBoolPtr(true),
+					InitialInterval: "1s",
+					MaxInterval:     "10s",
+					MaxElapsedTime:  "2m",
+				},
+				SendingQueue: SendingQueueConfig{
+					NumConsumers: testInt64Ptr(3),
+					QueueSize:    testInt64Ptr(2048),
+					Batch: SendingQueueBatchConfig{
+						FlushTimeout: "500ms",
+						Sizer:        "bytes",
+						MinSize:      testInt64Ptr(123),
+						MaxSize:      testInt64Ptr(456),
+					},
+				},
+			},
+			MemoryLimiter: MemoryLimiterConfig{
+				CheckInterval: "2s",
+				LimitMiB:      testInt64Ptr(512),
+				SpikeLimitMiB: testInt64Ptr(128),
+			},
+			Batch: BatchConfig{
+				Timeout:          "1s",
+				SendBatchSize:    testInt64Ptr(100),
+				SendBatchMaxSize: testInt64Ptr(200),
+			},
+			Logs: LogsConfig{
+				Level:       "debug",
+				Development: testBoolPtr(true),
+			},
+			DebugExporter: DebugExporterConfig{Enabled: true},
+		},
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{}, otelConfig.Exporters["debug"])
+
+	for _, exporterID := range []string{
+		"splunk_hec/SPLUNK-example-logs-logs",
+		"datadog/DATADOG-example-metrics-metrics",
+		"otlp/SERVICENOW-example-traces-traces",
+	} {
+		exporter := otelConfig.Exporters[exporterID]
+		assert.Equal(t, "30s", exporter["timeout"], exporterID)
+		assert.Equal(t, map[string]interface{}{
+			"enabled":          true,
+			"initial_interval": "1s",
+			"max_interval":     "10s",
+			"max_elapsed_time": "2m",
+		}, exporter["retry_on_failure"], exporterID)
+		assert.Equal(t, map[string]interface{}{
+			"enabled":       true,
+			"num_consumers": int64(3),
+			"queue_size":    int64(2048),
+			"batch": map[string]interface{}{
+				"flush_timeout": "500ms",
+				"sizer":         "bytes",
+				"min_size":      int64(123),
+				"max_size":      int64(456),
+			},
+		}, exporter["sending_queue"], exporterID)
+	}
+
+	assert.Equal(t, map[string]interface{}{
+		"check_interval":  "2s",
+		"limit_mib":       int64(512),
+		"spike_limit_mib": int64(128),
+	}, otelConfig.Processors["memory_limiter"])
+	assert.Equal(t, map[string]interface{}{
+		"send_batch_size":     int64(100),
+		"timeout":             "1s",
+		"send_batch_max_size": int64(200),
+	}, otelConfig.Processors["batch"])
+	assert.Equal(t, "debug", otelConfig.Service.Telemetry["logs"]["level"])
+	assert.Equal(t, true, otelConfig.Service.Telemetry["logs"]["development"])
+
+	for _, pipelineName := range []string{"logs", "metrics", "traces"} {
+		assert.Contains(t, otelConfig.Service.Pipelines[pipelineName].Exporters, "debug")
+	}
+}
+
 // Test_exporterMetrics_Datadog_KeepsFirstCumulativeSample is a regression test
 // for the missing nvct_worker_service_result_total metric in Datadog (task
 // scenario). Without metrics.sums.initial_cumulative_monotonic_value=keep, the
@@ -443,6 +556,14 @@ func Test_exporterMetrics_Datadog_KeepsFirstCumulativeSample(t *testing.T) {
 			"short-lived counters (e.g. nvct_worker_service_result_total) is not dropped")
 	assert.Equal(t, "15s", exporter["timeout"],
 		"exporter timeout must be set to bound the final batch flush before short-lived task pods terminate")
+}
+
+func testBoolPtr(v bool) *bool {
+	return &v
+}
+
+func testInt64Ptr(v int64) *int64 {
+	return &v
 }
 
 // Datadog metrics exporter must work for both GRPC and HTTP transport

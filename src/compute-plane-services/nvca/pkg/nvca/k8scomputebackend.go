@@ -317,7 +317,7 @@ func (c K8sComputeBackend) translateFunctionLaunchSpecification(
 		return nil, nvcaerrors.TerminalError(err)
 	}
 	if reqType == ftContainer {
-		envs := c.bk8s.cfg.Agent.BYOOLogChunking.EnvVars()
+		envs := c.bk8s.cfg.Agent.BYOOOTelCollectorEnvVars()
 		for _, obj := range objs {
 			pod, ok := obj.(*corev1.Pod)
 			if !ok {

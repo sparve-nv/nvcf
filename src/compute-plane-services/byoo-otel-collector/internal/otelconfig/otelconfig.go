@@ -42,6 +42,7 @@ type envConfig struct {
 	ByooLogChunkMaxBodyBytes         int    `split_words:"true"`
 	ByooLogChunkDryRun               bool   `split_words:"true"`
 	ByooLogExporterBatchMaxSizeBytes int    `split_words:"true"`
+	ByooOtelCollectorConfigB64       string `split_words:"true"`
 }
 
 func processEnvConfig(env *envConfig) error {
@@ -76,6 +77,11 @@ func getTemplateConfig() (TemplateConfig, error) {
 		return TemplateConfig{}, fmt.Errorf("BYOO_LOG_EXPORTER_BATCH_MAX_SIZE_BYTES: %w", err)
 	}
 	tcgf.LogExporterBatchMaxSizeBytes = logExporterBatchMaxSizeBytes
+	otelCollectorConfig, err := decodeOTelCollectorConfig(env.ByooOtelCollectorConfigB64)
+	if err != nil {
+		return TemplateConfig{}, fmt.Errorf("BYOO_OTEL_COLLECTOR_CONFIG_B64: %w", err)
+	}
+	tcgf.OTelCollector = otelCollectorConfig
 
 	functionID := env.NvcfFunctionID
 	functionVersionID := env.NvcfFunctionVersionID

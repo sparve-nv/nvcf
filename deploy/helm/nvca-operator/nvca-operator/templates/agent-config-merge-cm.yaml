@@ -1,4 +1,15 @@
+{{- $mergeConfig := dict -}}
 {{- if (.Values.agentConfig).mergeConfig }}
+{{- $mergeConfig = .Values.agentConfig.mergeConfig | fromYaml | default dict -}}
+{{- end }}
+{{- $agentValues := .Values.agent | default dict -}}
+{{- $byooOtelCollector := get $agentValues "byooOtelCollector" | default dict -}}
+{{- if $byooOtelCollector }}
+{{- $agentConfig := get $mergeConfig "agent" | default dict -}}
+{{- $_ := set $agentConfig "byooOtelCollector" $byooOtelCollector -}}
+{{- $_ := set $mergeConfig "agent" $agentConfig -}}
+{{- end }}
+{{- if $mergeConfig }}
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -22,5 +33,6 @@ metadata:
   labels:
     {{- include "nvcaop.labels" . | nindent 4 }}
 data:
-  config.yaml: {{- .Values.agentConfig.mergeConfig | toYaml | indent 2 }}
+  config.yaml: |
+{{ $mergeConfig | toYaml | indent 4 }}
 {{- end }}
