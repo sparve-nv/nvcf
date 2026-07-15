@@ -325,6 +325,11 @@ func TestGenerateExportersAndServiceAddsLogChunkProcessor(t *testing.T) {
 	}
 	otelConfig := &OpenTelemetryConfig{}
 	initializeConfigMaps(otelConfig)
+	otelConfig.Processors["batch"] = map[string]interface{}{
+		"send_batch_size":     4096,
+		"send_batch_max_size": 8192,
+		"timeout":             "200ms",
+	}
 
 	err := generateExportersAndService(cfg, otelConfig, TemplateConfig{
 		Namespace: "test-namespace",
@@ -339,12 +344,13 @@ func TestGenerateExportersAndServiceAddsLogChunkProcessor(t *testing.T) {
 		"memory_limiter",
 		"attributes/add-metadata",
 		"logchunk/byoo",
-		"batch",
+		"batch/logs",
 	}, otelConfig.Service.Pipelines["logs"].Processors)
 	assert.Equal(t, map[string]interface{}{
 		"max_body_bytes": 983040,
 		"dry_run":        true,
 	}, otelConfig.Processors["logchunk/byoo"])
+	assert.Equal(t, otelConfig.Processors["batch"], otelConfig.Processors["batch/logs"])
 
 	exporter := otelConfig.Exporters["splunk_hec/SPLUNK-example-logs-logs"]
 	assert.Equal(t, map[string]interface{}{
@@ -452,6 +458,11 @@ func TestGenerateExportersAndServiceAppliesCollectorOverrides(t *testing.T) {
 				SendBatchSize:    testInt64Ptr(100),
 				SendBatchMaxSize: testInt64Ptr(200),
 			},
+			LogBatch: BatchConfig{
+				Timeout:          "400ms",
+				SendBatchSize:    testInt64Ptr(340),
+				SendBatchMaxSize: testInt64Ptr(340),
+			},
 			Logs: LogsConfig{
 				Level:       "debug",
 				Development: testBoolPtr(true),
@@ -499,6 +510,14 @@ func TestGenerateExportersAndServiceAppliesCollectorOverrides(t *testing.T) {
 		"timeout":             "1s",
 		"send_batch_max_size": int64(200),
 	}, otelConfig.Processors["batch"])
+	assert.Equal(t, map[string]interface{}{
+		"send_batch_size":     int64(340),
+		"timeout":             "400ms",
+		"send_batch_max_size": int64(340),
+	}, otelConfig.Processors["batch/logs"])
+	assert.Equal(t, []string{"memory_limiter", "attributes/add-metadata", "batch/logs"}, otelConfig.Service.Pipelines["logs"].Processors)
+	assert.Equal(t, []string{"memory_limiter", "filter/metrics", "resource", "metrics_transform", "batch"}, otelConfig.Service.Pipelines["metrics"].Processors)
+	assert.Equal(t, []string{"memory_limiter", "attributes/add-metadata", "batch"}, otelConfig.Service.Pipelines["traces"].Processors)
 	assert.Equal(t, "debug", otelConfig.Service.Telemetry["logs"]["level"])
 	assert.Equal(t, true, otelConfig.Service.Telemetry["logs"]["development"])
 

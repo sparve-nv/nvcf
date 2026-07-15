@@ -2838,6 +2838,10 @@ func TestEncodeAgentConfig_MergesBYOOConfig(t *testing.T) {
 					Timeout:       "2s",
 					SendBatchSize: ptr.To[int64](2048),
 				},
+				LogBatch: nvcaconfig.BYOOOTelBatchConfig{
+					Timeout:       "400ms",
+					SendBatchSize: ptr.To[int64](340),
+				},
 				Logs: nvcaconfig.BYOOOTelLogsConfig{
 					Level:       "debug",
 					Development: &logDevelopment,
@@ -2871,6 +2875,9 @@ func TestEncodeAgentConfig_MergesBYOOConfig(t *testing.T) {
 	assert.Equal(t, "2s", got.Agent.BYOOOTelCollector.Batch.Timeout)
 	require.NotNil(t, got.Agent.BYOOOTelCollector.Batch.SendBatchSize)
 	assert.Equal(t, int64(2048), *got.Agent.BYOOOTelCollector.Batch.SendBatchSize)
+	assert.Equal(t, "400ms", got.Agent.BYOOOTelCollector.LogBatch.Timeout)
+	require.NotNil(t, got.Agent.BYOOOTelCollector.LogBatch.SendBatchSize)
+	assert.Equal(t, int64(340), *got.Agent.BYOOOTelCollector.LogBatch.SendBatchSize)
 	assert.Equal(t, "debug", got.Agent.BYOOOTelCollector.Logs.Level)
 	require.NotNil(t, got.Agent.BYOOOTelCollector.Logs.Development)
 	assert.True(t, *got.Agent.BYOOOTelCollector.Logs.Development)

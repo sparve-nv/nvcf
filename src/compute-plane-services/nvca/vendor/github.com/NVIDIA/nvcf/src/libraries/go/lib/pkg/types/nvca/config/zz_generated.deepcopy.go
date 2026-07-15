@@ -196,6 +196,7 @@ func (in *BYOOOTelCollectorConfig) DeepCopyInto(out *BYOOOTelCollectorConfig) {
 	in.ExporterHelper.DeepCopyInto(&out.ExporterHelper)
 	in.MemoryLimiter.DeepCopyInto(&out.MemoryLimiter)
 	in.Batch.DeepCopyInto(&out.Batch)
+	in.LogBatch.DeepCopyInto(&out.LogBatch)
 	in.Logs.DeepCopyInto(&out.Logs)
 	out.DebugExporter = in.DebugExporter
 	return

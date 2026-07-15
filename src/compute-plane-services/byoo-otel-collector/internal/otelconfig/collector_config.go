@@ -30,6 +30,7 @@ type OTelCollectorConfig struct {
 	ExporterHelper ExporterHelperConfig `json:"exporterHelper,omitempty"`
 	MemoryLimiter  MemoryLimiterConfig  `json:"memoryLimiter,omitempty"`
 	Batch          BatchConfig          `json:"batch,omitempty"`
+	LogBatch       BatchConfig          `json:"logBatch,omitempty"`
 	Logs           LogsConfig           `json:"logs,omitempty"`
 	DebugExporter  DebugExporterConfig  `json:"debugExporter,omitempty"`
 }
@@ -39,6 +40,7 @@ func (c OTelCollectorConfig) IsZero() bool {
 	return c.ExporterHelper.IsZero() &&
 		c.MemoryLimiter.IsZero() &&
 		c.Batch.IsZero() &&
+		c.LogBatch.IsZero() &&
 		c.Logs.IsZero() &&
 		c.DebugExporter.IsZero()
 }
@@ -183,7 +185,8 @@ func applyOTelCollectorConfig(otelConfig *OpenTelemetryConfig, cfg OTelCollector
 	}
 	applyExporterHelperConfig(otelConfig, cfg.ExporterHelper)
 	applyMemoryLimiterConfig(otelConfig, cfg.MemoryLimiter)
-	applyBatchConfig(otelConfig, cfg.Batch)
+	applyBatchConfig(otelConfig, "batch", cfg.Batch)
+	applyLogBatchConfig(otelConfig, cfg.LogBatch)
 	applyLogsConfig(otelConfig, cfg.Logs)
 	applyDebugExporterConfig(otelConfig, cfg.DebugExporter)
 }
@@ -319,11 +322,11 @@ func warnMemoryLimiterConflict(mibField, percentageField string) {
 	)
 }
 
-func applyBatchConfig(otelConfig *OpenTelemetryConfig, cfg BatchConfig) {
+func applyBatchConfig(otelConfig *OpenTelemetryConfig, processorID string, cfg BatchConfig) {
 	if cfg.IsZero() {
 		return
 	}
-	processor := mapFromInterface(otelConfig.Processors["batch"])
+	processor := mapFromInterface(otelConfig.Processors[processorID])
 	if cfg.Timeout != "" {
 		processor["timeout"] = cfg.Timeout
 	}
@@ -339,7 +342,17 @@ func applyBatchConfig(otelConfig *OpenTelemetryConfig, cfg BatchConfig) {
 	if cfg.MetadataCardinalityLimit != nil {
 		processor["metadata_cardinality_limit"] = *cfg.MetadataCardinalityLimit
 	}
-	otelConfig.Processors["batch"] = processor
+	otelConfig.Processors[processorID] = processor
+}
+
+func applyLogBatchConfig(otelConfig *OpenTelemetryConfig, cfg BatchConfig) {
+	if cfg.IsZero() {
+		return
+	}
+	if _, ok := otelConfig.Processors["batch/logs"]; !ok {
+		return
+	}
+	applyBatchConfig(otelConfig, "batch/logs", cfg)
 }
 
 func applyLogsConfig(otelConfig *OpenTelemetryConfig, cfg LogsConfig) {

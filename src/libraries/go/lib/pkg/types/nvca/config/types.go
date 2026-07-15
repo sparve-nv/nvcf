@@ -119,6 +119,7 @@ type BYOOOTelCollectorConfig struct {
 	ExporterHelper BYOOOTelExporterHelperConfig `mapstructure:"exporterHelper" yaml:"exporterHelper,omitempty" json:"exporterHelper,omitempty"`
 	MemoryLimiter  BYOOOTelMemoryLimiterConfig  `mapstructure:"memoryLimiter" yaml:"memoryLimiter,omitempty" json:"memoryLimiter,omitempty"`
 	Batch          BYOOOTelBatchConfig          `mapstructure:"batch" yaml:"batch,omitempty" json:"batch,omitempty"`
+	LogBatch       BYOOOTelBatchConfig          `mapstructure:"logBatch" yaml:"logBatch,omitempty" json:"logBatch,omitempty"`
 	Logs           BYOOOTelLogsConfig           `mapstructure:"logs" yaml:"logs,omitempty" json:"logs,omitempty"`
 	DebugExporter  BYOOOTelDebugExporterConfig  `mapstructure:"debugExporter" yaml:"debugExporter,omitempty" json:"debugExporter,omitempty"`
 }
@@ -128,6 +129,7 @@ func (c BYOOOTelCollectorConfig) IsZero() bool {
 	return c.ExporterHelper.IsZero() &&
 		c.MemoryLimiter.IsZero() &&
 		c.Batch.IsZero() &&
+		c.LogBatch.IsZero() &&
 		c.Logs.IsZero() &&
 		c.DebugExporter.IsZero()
 }

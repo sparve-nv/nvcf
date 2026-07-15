@@ -610,7 +610,8 @@ func generateExportersAndService(config TelemetryConfig, otelConfig *OpenTelemet
 			}
 			logPipeline.Processors = append(logPipeline.Processors, "logchunk/byoo")
 		}
-		logPipeline.Processors = append(logPipeline.Processors, "batch")
+		otelConfig.Processors["batch/logs"] = cloneMap(otelConfig.Processors["batch"])
+		logPipeline.Processors = append(logPipeline.Processors, "batch/logs")
 		otelConfig.Service.Pipelines["logs"] = logPipeline
 	}
 
@@ -645,4 +646,12 @@ func generateExportersAndService(config TelemetryConfig, otelConfig *OpenTelemet
 	applyOTelCollectorConfig(otelConfig, tmplConfig.OTelCollector)
 
 	return nil
+}
+
+func cloneMap(in map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
 }

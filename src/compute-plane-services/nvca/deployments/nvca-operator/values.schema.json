@@ -431,7 +431,31 @@
                         },
                         "batch": {
                             "type": "object",
-                            "description": "batch processor overrides.",
+                            "description": "metrics/traces batch processor overrides.",
+                            "properties": {
+                                "timeout": {
+                                    "type": "string"
+                                },
+                                "sendBatchSize": {
+                                    "type": "integer"
+                                },
+                                "sendBatchMaxSize": {
+                                    "type": "integer"
+                                },
+                                "metadataKeys": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "metadataCardinalityLimit": {
+                                    "type": "integer"
+                                }
+                            }
+                        },
+                        "logBatch": {
+                            "type": "object",
+                            "description": "logs-only batch processor overrides.",
                             "properties": {
                                 "timeout": {
                                     "type": "string"

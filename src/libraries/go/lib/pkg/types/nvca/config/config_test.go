@@ -204,6 +204,7 @@ func TestAgentConfig_BYOOOTelCollectorEnvVars(t *testing.T) {
 	queueEnabled := true
 	queueSize := int64(1024)
 	sendBatchSize := int64(2048)
+	logSendBatchSize := int64(340)
 	exporterBatchMaxSizeBytes := int64(1000000)
 
 	agentConfig := AgentConfig{
@@ -229,6 +230,10 @@ func TestAgentConfig_BYOOOTelCollectorEnvVars(t *testing.T) {
 			Batch: BYOOOTelBatchConfig{
 				Timeout:       "2s",
 				SendBatchSize: &sendBatchSize,
+			},
+			LogBatch: BYOOOTelBatchConfig{
+				Timeout:       "400ms",
+				SendBatchSize: &logSendBatchSize,
 			},
 			Logs: BYOOOTelLogsConfig{
 				Level:       "debug",
